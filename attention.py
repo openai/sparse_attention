@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import tensorflow as tf
 from blocksparse import BlocksparseTransformer
@@ -74,11 +75,13 @@ def attention_impl(q, k, v, heads, attn_mode, local_attn_ctx=None):
     mask = tf.to_float(get_attn_mask(n_timesteps, attn_mode, local_attn_ctx))
     w = tf.matmul(q, k, transpose_b=True)
     scale_amount = 1.0 / np.sqrt(shape_list(q)[-1])
-    w = tf.cast(w, tf.float32)
+    orig_dtype = q.dtype
+    if orig_dtype == tf.float16:
+        w = tf.cast(w, tf.float32)
     w = w * scale_amount
     w = w * mask + -1e9 * (1 - mask)
     w = tf.nn.softmax(w)
-    w = tf.cast(w, tf.float16)
+    w = tf.cast(w, orig_dtype)
     a = tf.matmul(w, v)
     a = merge_heads(a)
     return a
@@ -213,31 +216,33 @@ if __name__ == '__main__':
     n_batch = 4
     n_ctx = 1024
     n_embd = 256
+    is_fp16 = len(sys.argv) > 1 and sys.argv[1] == 'fp16'
 
+    dtype = tf.float16 if is_fp16 else tf.float32
+    blocksize = 32
     # query, key, values should be batch x time x dim.
-    q = tf.random_normal(shape=[4, 1024, 256], dtype=tf.float16)
-    k = tf.random_normal(shape=[4, 1024, 256], dtype=tf.float16)
-    v = tf.random_normal(shape=[4, 1024, 256], dtype=tf.float16)
+    q = tf.random_normal(shape=[4, 1024, 256], dtype=dtype)
+    k = tf.random_normal(shape=[4, 1024, 256], dtype=dtype)
+    v = tf.random_normal(shape=[4, 1024, 256], dtype=dtype)
 
     full_attn_tf = attention_impl(q, k, v, heads=4, attn_mode="all", recompute=True)
-    full_attn_bs = blocksparse_attention_impl(q, k, v, heads=4, attn_mode="all", recompute=True)
+    full_attn_bs = blocksparse_attention_impl(q, k, v, heads=4, attn_mode="all", blocksize=blocksize, recompute=True)
 
-    # first step of strided attention
-    local_attn_bs = blocksparse_attention_impl(q, k, v, heads=4, attn_mode="local", local_attn_ctx=32, recompute=True)
+    # # first step of strided attention
+    local_attn_bs = blocksparse_attention_impl(q, k, v, heads=4, attn_mode="local", local_attn_ctx=32, blocksize=blocksize, recompute=True)
     local_attn_tf = attention_impl(q, k, v, heads=4, attn_mode="local", local_attn_ctx=32, recompute=True)
 
-    # second step of strided attention
-    strided_attn_bs = blocksparse_attention_impl(q, k, v, heads=4, attn_mode="strided", local_attn_ctx=32, recompute=True)
+    # # second step of strided attention
+    strided_attn_bs = blocksparse_attention_impl(q, k, v, heads=4, attn_mode="strided", local_attn_ctx=32, blocksize=blocksize, recompute=True)
     strided_attn_tf = attention_impl(q, k, v, heads=4, attn_mode="strided", local_attn_ctx=32, recompute=True)
 
-    # # the 'fixed' attention pattern
-    fixed = blocksparse_attention_impl(q, k, v, heads=4, attn_mode="fixed", local_attn_ctx=128, num_verts=4, vertsize=1, recompute=True)
+    # # # the 'fixed' attention pattern
+    fixed = blocksparse_attention_impl(q, k, v, heads=4, attn_mode="fixed", local_attn_ctx=128, num_verts=4, vertsize=1, blocksize=blocksize, recompute=True)
     sess = tf.Session()
 
     fatf, fabs, latf, labs, satf, sabs, fixed_bs = sess.run([
         full_attn_tf, full_attn_bs, local_attn_tf, local_attn_bs, strided_attn_tf, strided_attn_bs, fixed])
 
-    # print(a1t, a2t)
     print(fatf[0])
     print(fabs[0])
     print('-----')
