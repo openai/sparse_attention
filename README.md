@@ -10,6 +10,8 @@ This repository contains the sparse attention primitives used in [Sparse Transfo
 
 We hope this code can further accelerate research into sparse attention.
 
+An example Transformer implementation which is close to the version we use internally can be found at https://github.com/openai/blocksparse/blob/master/examples/transformer/enwik8.py. 
+
 # Overview of kernels
 The repository contains fused implementations of the attention operation, which takes in `Q`, `K`, `V` matrices (all of dimensionality `batch, time, dim`) representing the queries, keys, and values for a sequence. For every query element, a weighted sum of the values is returned, where the weightings are determined by the scaled matrix product of `Q` and `K^T`.
 
