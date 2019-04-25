@@ -2,7 +2,7 @@
 
 # Sparse Attention
 
-This repository contains the sparse attention primitives used in [Sparse Transformers](https://openai.com/blog/sparse-transformer). Specifically, it includes the following:
+This repository contains the sparse attention primitives used in Sparse Transformers (see [blog](https://openai.com/blog/sparse-transformer) and [paper](https://arxiv.org/abs/1904.10509)). Specifically, it includes the following:
 
 1) A faster implementation of normal attention (the upper triangle is not computed, and many operations are fused).
 2) An implementation of "strided" and "fixed" attention, as in the Sparse Transformers paper.
