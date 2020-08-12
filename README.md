@@ -1,5 +1,7 @@
 **Status:** Archive (code is provided as-is, no updates expected)
 
+**Update August 2020:** For an example repository that achieves state-of-the-art modeling performance on CIFAR-10 using Sparse Transformers, please see https://github.com/openai/distribution_augmentation
+
 # Sparse Attention
 
 This repository contains the sparse attention primitives used in Sparse Transformers (see [blog](https://openai.com/blog/sparse-transformer) and [paper](https://arxiv.org/abs/1904.10509)). Specifically, it includes the following:
